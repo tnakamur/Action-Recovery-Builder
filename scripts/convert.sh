@@ -24,7 +24,7 @@ fi
 
 
 if [ -e $manifest_path ]; then
-	sed -i 's@</manifest>@@g' $manifest_path
+	exit 0
 else
 	echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > $manifest_path
 	echo "<manifest>" >> $manifest_path
