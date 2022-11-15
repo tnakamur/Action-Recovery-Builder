@@ -61,7 +61,7 @@ jobs:
         echo "Makefile Name: ${{ github.event.inputs.MAKEFILE_NAME }}"
         echo "Build Target: ${{ github.event.inputs.BUILD_TARGET }}.img"
         echo "::endgroup::"
- 
+
     # You might want to Checkout your repo first, but not mandatory
     - name: Check Out
       uses: actions/checkout@v3
@@ -95,22 +95,22 @@ jobs:
         curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
         chmod a+x ~/bin/repo
         sudo ln -sf ~/bin/repo /usr/bin/repo
-      
+
     - name: Initialize repo
       run: |
-        mkdir workspace
-        cd workspace
+        mkdir -p ~/workspace
+        cd ~/workspace
         echo "workspace-folder=$(pwd)" >> $GITHUB_OUTPUT
         git config --global user.name "tnakamur"
         git config --global user.email "taka.nakamura1009@gmail.com"
         repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }}
       id: pwd
-          
+
     - name: Repo Sync
       run: |
         repo sync -j$(nproc --all) --force-sync
-      working-directory: workspace
-      
+      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+
     - name: Clone device tree
       run: |
         git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.DEVICE_PATH }}
@@ -146,6 +146,9 @@ jobs:
 
     - name: Building recovery
       run: |
+        sudo mkdir -p /mnt/ccache
+        sudo mount --bind /home/taknak368/.ccache /mnt/ccache
+        export USE_CCACHE=1 && export CCACHE_EXEC=/usr/bin/ccache && ccache -M 20G && export CCACHE_DIR=/mnt/ccache
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
@@ -154,7 +157,7 @@ jobs:
     - name: Upload to Release
       uses: softprops/action-gh-release@v1
       with:
-        files: workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_TARGET }}.img
+        files: ~/workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_TARGET }}.img
         name: ${{ github.event.inputs.DEVICE_NAME }}-${{ github.run_id }}
         tag_name: ${{ github.run_id }}
         body: |
