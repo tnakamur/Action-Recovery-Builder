@@ -41,11 +41,23 @@ on:
         description: 'BUILD_TARGET'
         required: true
         default: 'boot'
+      INSTANCE_OCID:
+        description: 'INSTANCE_OCID'
+        required: true
+        default: 'ocid1.instance.oc1.ap-osaka-1.anvwsljri7psv7icqkboy57ylkad25i74gxuthsle5tiaayjmazdimuoadea'
 
 jobs:
+  cloud_start:
+    if: github.event.repository.owner.id == github.event.sender.id
+    runs-on: [self-hosted, host]
+    steps:
+    - name: Oracle Cloud Start
+      run: |
+        oci compute instance action --action start --wait-for-state RUNNING --instance-id ocid1.instance.oc1.ap-osaka-1.anvwsljri7psv7icqkboy57ylkad25i74gxuthsle5tiaayjmazdimuoadea | grep "lifecycle-state"
   build:
     if: github.event.repository.owner.id == github.event.sender.id
-    runs-on: self-hosted
+    runs-on: [self-hosted, build]
+    needs: cloud_start
     timeout-minutes: 720
     # You can use either of the ubuntu-18.04 or ubuntu-20.04 runner
     steps:
@@ -65,6 +77,7 @@ jobs:
     # You might want to Checkout your repo first, but not mandatory
     - name: Check Out
       uses: actions/checkout@v3
+
     # Cleanup The Actions Workspace Using Custom Composite Run Actions
     - name: Cleanup
       uses: rokibhasansagar/slimhub_actions@main
@@ -168,3 +181,10 @@ jobs:
           Target: ${{ github.event.inputs.BUILD_TARGET }}.img
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  cloud_stop:
+    if: github.event.repository.owner.id == github.event.sender.id
+    runs-on: [self-hosted, host]
+    steps:
+    - name: Oracle Cloud Stop
+      run: |
+        oci compute instance action --action stop --wait-for-state STOPPED --instance-id ocid1.instance.oc1.ap-osaka-1.anvwsljri7psv7icqkboy57ylkad25i74gxuthsle5tiaayjmazdimuoadea | grep "lifecycle-state"
