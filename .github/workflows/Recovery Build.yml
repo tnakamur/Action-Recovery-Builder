@@ -184,6 +184,7 @@ jobs:
   cloud_stop:
     if: github.event.repository.owner.id == github.event.sender.id
     runs-on: [self-hosted, host]
+    needs: build
     steps:
     - name: Oracle Cloud Stop
       run: |
